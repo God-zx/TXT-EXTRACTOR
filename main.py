@@ -20,14 +20,13 @@
 #  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #  SOFTWARE
 
-
 import os
 import asyncio
 import importlib
 import logging
 from pyrogram import Client, idle
 from logging.handlers import RotatingFileHandler
-from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SUDO_USERS, MONGO_URL, CHANNEL_ID, PREMIUM_LOGS  # Directly import required variables
+from config import API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SUDO_USERS, MONGO_URL, CHANNEL_ID, PREMIUM_LOGS
 from Extractor.modules import ALL_MODULES
 from web import web_app
 import threading
@@ -44,8 +43,18 @@ logging.basicConfig(
     ],
 )
 
+# Initialize Pyrogram Client
+app = Client(
+    "TXT_EXTRACTOR_BOT",
+    api_id=API_ID,
+    api_hash=API_HASH,
+    bot_token=BOT_TOKEN,
+    workers=100
+)
+
 # Bot initialization function
 async def sumit_boot():
+    await app.start()
     for all_module in ALL_MODULES:
         importlib.import_module("Extractor.modules." + all_module)
 
@@ -58,9 +67,4 @@ def run_web():
 
 if __name__ == "__main__":
     threading.Thread(target=run_web).start()  # Start web server in background
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(sumit_boot())     # Start Pyrogram bot
-
-
-
-
+    asyncio.run(sumit_boot())  # Start Pyrogram bot
