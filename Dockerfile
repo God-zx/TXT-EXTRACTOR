@@ -31,5 +31,8 @@ WORKDIR /EXTRACTOR
 # Copying Project Files
 COPY . /EXTRACTOR
 
+# Make start.sh executable
+RUN chmod +x start.sh
+
 # Running Bot
 CMD ["bash", "start.sh"]
