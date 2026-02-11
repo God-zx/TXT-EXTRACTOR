@@ -1,5 +1,5 @@
-import os
 from flask import Flask
+import os
 
 web_app = Flask(__name__)
 
@@ -9,4 +9,3 @@ def home():
 
 if __name__ == "__main__":
     web_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
-  
