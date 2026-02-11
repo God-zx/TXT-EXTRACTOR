@@ -12,15 +12,15 @@
       "required": true
     },
     "BOT_TOKEN": {
-      "description": "",
+      "description": "8006527414:AAG9FvwPFf3ozLwe5W_PYnb-LNxH4JE86wU",
       "required": true
     },
     "BOT_USERNAME": {
-      "description": "",
+      "description": "@Nawaab_Extractor_Robot",
       "required": true
     },
     "OWNER_ID": {
-      "description": "",
+      "description": "8500852075",
       "required": true
     },
     "SUDO_USERS": {
