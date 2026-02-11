@@ -32,7 +32,7 @@
       "required": true
     },
     "MONGO_URL": {
-      "description": "mongodb+srv://<sandeepsharma786>:<Sandeep786>@cluster0.xz78w44.mongodb.net/",
+      "description": "mongodb+srv://<sandeepsharma786>:<Sandeep786>@cluster0.xz78w44.mongodb.net",
       "required": true
     },
     "PREMIUM_LOGS": {
