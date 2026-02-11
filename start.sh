@@ -1,8 +1,9 @@
 #!/bin/bash
 
 echo "Container Started..."
-echo "Starting Web + Bot..."
+echo "Starting Bot..."
 
 cd /EXTRACTOR || exit
 
-python app.py
+# Run the bot using the module
+python -m Extractor
