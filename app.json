@@ -16,7 +16,7 @@
       "required": true
     },
     "BOT_USERNAME": {
-      "description": "@Nawaab_Extractor_Robot",
+      "description": "Nawaab_Extractor_Robot",
       "required": true
     },
     "OWNER_ID": {
