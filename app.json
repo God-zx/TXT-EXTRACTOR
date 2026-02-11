@@ -4,11 +4,11 @@
   "repository": "https://github.com/DAXXTEAM",
   "env": {
     "API_ID": {
-      "description": "",
+      "description": "22518279",
       "required": true
     },
     "API_HASH": {
-      "description": "",
+      "description": "61e5cc94bc5e6318643707054e54caf4",
       "required": true
     },
     "BOT_TOKEN": {
@@ -28,11 +28,11 @@
       "required": false
     },
     "CHANNEL_ID": {
-      "description": "",
+      "description": "-1003828380273",
       "required": true
     },
     "MONGO_URL": {
-      "description": "",
+      "description": "mongodb+srv://<sandeepsharma786>:<Sandeep786>@cluster0.xz78w44.mongodb.net/",
       "required": true
     },
     "PREMIUM_LOGS": {
