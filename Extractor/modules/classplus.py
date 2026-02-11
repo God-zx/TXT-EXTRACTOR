@@ -300,5 +300,5 @@ async def extract_handler(client, message):
     session = requests.Session()
     await classplus_txt(message, session, user_id=None)
 
-app.start()
-idle()
+# REMOVED: app.start() and idle() - These should NOT be in module files!
+# The Client is started in Extractor/__init__.py or Extractor/__main__.py only
