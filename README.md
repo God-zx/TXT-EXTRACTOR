@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://t.me/spidy-bots">
-    <img src="https://img.shields.io/badge/SPIDY-BOTS-303030?style=for-the-badge&logo=telegram&logoColor=white"/>
+  <a href="https://t.me/zx-bots">
+    <img src="https://img.shields.io/badge/ZX-BOTS-303030?style=for-the-badge&logo=telegram&logoColor=white"/>
   </a>
 </p>
 
@@ -110,5 +110,5 @@ Feel free to **fork this repo**, add your own tweaks, and build your own version
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://t.me/spidy_bots">Spidy</a>
+  Made with ❤️ by <a href="https://t.me/Zx_bots">Spidy</a>
 </p>
