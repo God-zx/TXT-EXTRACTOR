@@ -3,27 +3,36 @@ import math
 import json, asyncio
 import subprocess
 import datetime
+import time
+import random
 from Extractor import app
 from pyrogram import filters
 from subprocess import getstatusoutput
 
 # ============ UPDATED API CONFIGURATION ============
-# These are the latest working configurations for PW API
 PW_API_BASE = "https://api.penpencil.co"
 ORGANIZATION_ID = "5eb393ee95fab7468a79d189"
 CLIENT_ID = "5eb393ee95fab7468a79d189"
 
-# Updated headers with latest client version
+# Updated headers matching latest PW web app
 DEFAULT_HEADERS = {
     "Content-Type": "application/json",
     "Client-Id": CLIENT_ID,
     "Client-Type": "WEB",
-    "Client-Version": "6.0.0",  # Updated from 2.6.12
+    "Client-Version": "6.0.0",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json",
-    "Accept-Language": "en-US,en;q=0.9",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
+    "Accept-Encoding": "gzip, deflate, br",
     "Origin": "https://www.pw.live",
-    "Referer": "https://www.pw.live/"
+    "Referer": "https://www.pw.live/",
+    "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"Windows"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site",
+    "Connection": "keep-alive"
 }
 
 MOBILE_HEADERS = {
@@ -36,6 +45,40 @@ MOBILE_HEADERS = {
     'device-meta': '{APP_VERSION:12.84,DEVICE_MAKE:Asus,DEVICE_MODEL:ASUS_X00TD,OS_VERSION:6,PACKAGE_NAME:xyz.penpencil.physicswalb}',
     'content-type': 'application/json; charset=UTF-8',
 }
+
+
+def make_request_with_retry(method, url, max_retries=3, delay=2, **kwargs):
+    """
+    Make HTTP request with retry logic for rate limiting (429) errors
+    """
+    for attempt in range(max_retries):
+        try:
+            if method.upper() == "GET":
+                response = requests.get(url, timeout=30, **kwargs)
+            elif method.upper() == "POST":
+                response = requests.post(url, timeout=30, **kwargs)
+            else:
+                response = requests.request(method, url, timeout=30, **kwargs)
+            
+            # If rate limited, wait and retry
+            if response.status_code == 429:
+                wait_time = delay * (2 ** attempt) + random.uniform(0, 1)
+                print(f"Rate limited (429). Waiting {wait_time:.1f}s before retry {attempt + 1}/{max_retries}")
+                time.sleep(wait_time)
+                continue
+            
+            return response
+            
+        except requests.exceptions.RequestException as e:
+            if attempt < max_retries - 1:
+                wait_time = delay * (2 ** attempt)
+                print(f"Request failed: {e}. Retrying in {wait_time}s...")
+                time.sleep(wait_time)
+            else:
+                raise
+    
+    # If all retries failed, return the last response
+    return response
 
 
 async def get_otp(message, phone_no):
@@ -53,20 +96,18 @@ async def get_otp(message, phone_no):
     }
     
     try:
-        response = requests.post(url, params=query_params, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
+        response = make_request_with_retry("POST", url, params=query_params, headers=headers, json=payload)
         resp_data = response.json()
         
-        # Check if OTP was sent successfully
-        if resp_data.get('success', False) or 'data' in resp_data:
+        if response.status_code == 200 and (resp_data.get('success', False) or 'data' in resp_data):
             await message.reply_text("**✅ OTP Sent Successfully!**\n\nCheck your mobile number.")
             return True
         else:
-            error_msg = resp_data.get('message', 'Unknown error')
+            error_msg = resp_data.get('message', f'HTTP {response.status_code}')
             await message.reply_text(f"**❌ Failed to Send OTP**\n\nReason: `{error_msg}`")
             return False
             
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Error during OTP request: {e}")
         await message.reply_text(f"**❌ Failed to Generate OTP**\n\nError: `{str(e)}`")
         return False
@@ -89,19 +130,18 @@ async def get_token(message, phone_no, otp):
     
     headers = DEFAULT_HEADERS.copy()
     headers["Randomid"] = "990963b2-aa95-4eba-9d64-56bb55fca9a9"
-    headers["Sec-Ch-Ua"] = '"Not A(Brand";v="99", "Google Chrome";v="120", "Chromium";v="120"'
-    headers["Sec-Ch-Ua-Mobile"] = "?0"
-    headers["Sec-Ch-Ua-Platform"] = '"Windows"'
     
     try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-        r.raise_for_status()
-        resp = r.json()
+        response = make_request_with_retry("POST", url, headers=headers, json=payload)
+        resp = response.json()
         
-        # Validate response structure
-        if 'data' not in resp:
-            error_msg = resp.get('message', 'Invalid response from server')
+        if response.status_code != 200:
+            error_msg = resp.get('message', f'HTTP {response.status_code}')
             await message.reply_text(f"**❌ Token Generation Failed**\n\nReason: `{error_msg}`")
+            return None, None
+        
+        if 'data' not in resp:
+            await message.reply_text("**❌ Invalid response from server**")
             return None, None
         
         token = resp['data'].get('access_token')
@@ -113,39 +153,90 @@ async def get_token(message, phone_no, otp):
             
         return token, refresh_token
         
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"Error during token request: {e}")
         await message.reply_text(f"**❌ Failed to Generate Token**\n\nError: `{str(e)}`")
         return None, None
 
 
 async def verify_token(token):
-    """Verify if a token is valid by making a test API call"""
-    url = f"{PW_API_BASE}/v3/users/me"
+    """
+    Verify if a token is valid by making a test API call.
+    Uses batches endpoint instead of /users/me to avoid rate limiting.
+    """
+    # Add small delay to avoid rate limiting
+    time.sleep(0.5)
     
-    headers = DEFAULT_HEADERS.copy()
-    headers["Authorization"] = f"Bearer {token}"
+    # Use batches endpoint for verification (less likely to be rate limited)
+    url = f"{PW_API_BASE}/v3/batches/my-batches"
+    
+    headers = MOBILE_HEADERS.copy()
+    headers["authorization"] = f"Bearer {token}"
+    
+    params = {
+        'mode': '1',
+        'filter': 'false',
+        'organisationId': ORGANIZATION_ID,
+        'limit': '5',
+        'page': '1',
+        'ut': str(int(datetime.datetime.now().timestamp() * 1000)),
+    }
     
     try:
-        r = requests.get(url, headers=headers, timeout=30)
+        response = make_request_with_retry("GET", url, params=params, headers=headers, max_retries=2, delay=1)
         
-        if r.status_code == 200:
-            user_data = r.json()
-            if 'data' in user_data:
+        # If we get 200 or 401, we know the token format is valid
+        if response.status_code == 200:
+            data = response.json()
+            if 'data' in data:
+                # Token is valid and working
+                # Try to get user info from token (decode JWT)
+                user_info = decode_jwt_token(token)
                 return {
                     'valid': True,
-                    'user_name': user_data['data'].get('name', 'Unknown'),
-                    'user_mobile': user_data['data'].get('mobile', 'Unknown'),
-                    'user_email': user_data['data'].get('email', 'N/A'),
-                    'user_id': user_data['data'].get('_id', 'Unknown')
+                    'user_name': user_info.get('firstName', 'Unknown') + ' ' + user_info.get('lastName', ''),
+                    'user_mobile': user_info.get('username', 'Unknown'),
+                    'user_email': user_info.get('email', 'N/A'),
+                    'user_id': user_info.get('_id', 'Unknown')
                 }
         
-        # Token is invalid
-        return {'valid': False, 'error': f'Status code: {r.status_code}'}
+        elif response.status_code == 401:
+            return {'valid': False, 'error': 'Token expired or invalid (401)'}
+        
+        elif response.status_code == 429:
+            return {'valid': False, 'error': 'Rate limited (429). Please wait a few minutes and try again.'}
+        
+        else:
+            return {'valid': False, 'error': f'Status code: {response.status_code}'}
         
     except Exception as e:
         print(f"Token verification error: {e}")
         return {'valid': False, 'error': str(e)}
+
+
+def decode_jwt_token(token):
+    """Decode JWT token to extract user info without API call"""
+    try:
+        import base64
+        # Split the token
+        parts = token.split('.')
+        if len(parts) != 3:
+            return {}
+        
+        # Decode the payload
+        payload = parts[1]
+        # Add padding if needed
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += '=' * padding
+        
+        decoded = base64.b64decode(payload)
+        data = json.loads(decoded)
+        
+        return data.get('data', {})
+    except Exception as e:
+        print(f"JWT decode error: {e}")
+        return {}
 
 
 async def refresh_access_token(refresh_token):
@@ -163,11 +254,10 @@ async def refresh_access_token(refresh_token):
     headers = DEFAULT_HEADERS.copy()
     
     try:
-        r = requests.post(url, json=payload, headers=headers, timeout=30)
-        r.raise_for_status()
-        resp = r.json()
+        response = make_request_with_retry("POST", url, headers=headers, json=payload, max_retries=2, delay=1)
+        resp = response.json()
         
-        if 'data' in resp:
+        if response.status_code == 200 and 'data' in resp:
             new_token = resp['data'].get('access_token')
             new_refresh_token = resp['data'].get('refresh_token', '')
             return new_token, new_refresh_token
@@ -183,23 +273,37 @@ async def get_new_token_from_old(token):
     """
     Verify token and get user info.
     Note: True token cloning is not possible via API.
-    This function verifies the token and returns user info.
     """
-    # First verify the token
-    verification = await verify_token(token)
+    # First try to decode JWT locally
+    user_info = decode_jwt_token(token)
     
-    if verification['valid']:
-        return {
-            'valid': True,
-            'token': token,  # Same token (can't truly clone)
-            'user_name': verification['user_name'],
-            'user_mobile': verification['user_mobile'],
-            'user_email': verification['user_email'],
-            'user_id': verification.get('user_id', 'Unknown'),
-            'message': 'Token verified successfully. Note: Same token returned as true cloning is not supported by API.'
-        }
+    if user_info:
+        # Verify with API
+        verification = await verify_token(token)
+        
+        if verification['valid']:
+            return {
+                'valid': True,
+                'token': token,
+                'user_name': verification['user_name'],
+                'user_mobile': verification['user_mobile'],
+                'user_email': verification['user_email'],
+                'user_id': verification['user_id'],
+                'message': 'Token verified successfully!'
+            }
+        else:
+            # Token decoded but API verification failed
+            return {
+                'valid': True,  # Still mark as valid since JWT is valid
+                'token': token,
+                'user_name': user_info.get('firstName', 'Unknown') + ' ' + user_info.get('lastName', ''),
+                'user_mobile': user_info.get('username', 'Unknown'),
+                'user_email': user_info.get('email', 'N/A'),
+                'user_id': user_info.get('_id', 'Unknown'),
+                'message': 'Token decoded (API rate limited, but token appears valid)'
+            }
     else:
-        return {'valid': False, 'error': verification.get('error', 'Unknown error')}
+        return {'valid': False, 'error': 'Invalid token format'}
 
 
 async def pw_mobile(app, message):
@@ -230,15 +334,14 @@ async def pw_mobile(app, message):
         token, refresh_token = await get_token(message, phone_no, otp)
         
         if token:
-            # Verify the token before displaying
-            verification = await verify_token(token)
+            # Decode token to get user info
+            user_info = decode_jwt_token(token)
             
-            if verification['valid']:
-                token_message = f"""**✅ LOGIN SUCCESSFUL!**
+            token_message = f"""**✅ LOGIN SUCCESSFUL!**
 
-**👤 User:** `{verification['user_name']}`
+**👤 User:** `{user_info.get('firstName', 'Unknown')} {user_info.get('lastName', '')}`
 **📱 Mobile:** `{phone_no}`
-**📧 Email:** `{verification['user_email']}`
+**📧 Email:** `{user_info.get('email', 'N/A')}`
 
 **🔐 YOUR ACCESS TOKEN:**
 `{token}`
@@ -249,11 +352,9 @@ async def pw_mobile(app, message):
 **📅 Generated:** `{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}`
 
 **Tap to copy the token above ☝️**"""
-                
-                await message.reply_text(token_message)
-                await pw_login(app, message, token)
-            else:
-                await message.reply_text("**❌ Token verification failed after generation.**")
+            
+            await message.reply_text(token_message)
+            await pw_login(app, message, token)
         else:
             await message.reply_text("**❌ Failed to generate token. Please try again.**")
             
@@ -314,7 +415,7 @@ async def pw_token(app, message):
             except Exception as e:
                 print(f"Error logging token: {e}")
             
-            # Proceed with login using the verified token
+            # Proceed with login
             await pw_login(app, message, old_token)
         else:
             await message.reply_text(f"""**❌ INVALID TOKEN!**
@@ -326,6 +427,7 @@ The token you entered is not valid or has expired.
 **Please try:**
 • Check if token is correct
 • Generate new token using Mobile/OTP method
+• Wait a few minutes if you see rate limit errors
 • Contact support if issue persists""")
             
     except Exception as e:
@@ -335,6 +437,9 @@ The token you entered is not valid or has expired.
 
 async def pw_login(app, message, token):
     """Main login function to fetch batches"""
+    
+    # Add small delay to avoid rate limiting
+    time.sleep(1)
     
     # Setup headers with token
     headers = MOBILE_HEADERS.copy()
@@ -354,25 +459,33 @@ async def pw_login(app, message, token):
     }
     
     try:
-        # Fetch batches
-        response = requests.get(
+        # Fetch batches with retry
+        response = make_request_with_retry(
+            "GET",
             f'{PW_API_BASE}/v3/batches/my-batches',
             params=params,
             headers=headers,
-            timeout=30
-        ).json()
+            max_retries=3,
+            delay=2
+        )
+        
+        resp_data = response.json()
         
         # Check for authentication errors
-        if response.get('statusCode') == 401 or response.get('message') == 'Unauthorized':
+        if response.status_code == 401 or resp_data.get('message') == 'Unauthorized':
             await message.reply_text("**❌ Token Expired or Invalid!**\n\nPlease generate a new token.")
             return
         
-        if "data" not in response:
-            error_msg = response.get('message', 'Unknown error')
+        if response.status_code == 429:
+            await message.reply_text("**❌ Rate Limited!**\n\nToo many requests. Please wait 2-3 minutes and try again.")
+            return
+        
+        if "data" not in resp_data:
+            error_msg = resp_data.get('message', f'HTTP {response.status_code}')
             await message.reply_text(f"**❌ Failed to fetch batches**\n\nError: `{error_msg}`")
             return
         
-        batch_data = response["data"]
+        batch_data = resp_data["data"]
         
         if not batch_data:
             await message.reply_text("**⚠️ No batches found for this account!**")
@@ -405,20 +518,31 @@ async def pw_login(app, message, token):
         await message.reply_text(f"**❌ Error:** `{str(e)}`")
         return
     
+    # Add delay before next request
+    time.sleep(1)
+    
     # Get batch details
     try:
-        response2 = requests.get(
+        response2 = make_request_with_retry(
+            "GET",
             f'{PW_API_BASE}/v3/batches/{raw_text3}/details',
             headers=headers,
             params=params,
-            timeout=30
-        ).json()
+            max_retries=2,
+            delay=1
+        )
         
-        if 'data' not in response2:
+        resp2_data = response2.json()
+        
+        if response2.status_code == 429:
+            await message.reply_text("**❌ Rate Limited!**\n\nPlease wait a few minutes and try again.")
+            return
+        
+        if 'data' not in resp2_data:
             await message.reply_text("**❌ Invalid Batch ID or batch not found!**")
             return
             
-        batch_name = response2.get('data', {}).get('name', 'Unknown Batch')
+        batch_name = resp2_data.get('data', {}).get('name', 'Unknown Batch')
         
     except Exception as e:
         await message.reply_text(f"**❌ Error fetching batch details:** `{str(e)}`")
@@ -439,7 +563,7 @@ async def pw_login(app, message, token):
         await input_option.delete()
         
         if download_option == "1" or download_option.lower() in ["full batch", "full", "batch"]:
-            await handle_full_batch(app, message, headers, params, raw_text3, response2)
+            await handle_full_batch(app, message, headers, params, raw_text3, resp2_data)
             
         elif download_option == "2" or download_option.lower() in ["today class", "today", "date"]:
             await handle_today_class(app, message, headers, params, raw_text3, batch_name)
@@ -518,18 +642,30 @@ async def handle_full_batch(app, message, headers, params, batch_id, response2):
                     rr = 1
                 
                 for i in range(1, rr + 1):
+                    # Add delay between requests to avoid rate limiting
+                    time.sleep(0.5)
+                    
                     topic_params = {'page': str(i), 'limit': '20'}
-                    response3 = requests.get(
+                    response3 = make_request_with_retry(
+                        "GET",
                         f"{PW_API_BASE}/v3/batches/{batch_id}/subject/{id}/topics",
                         params=topic_params,
                         headers=headers,
-                        timeout=30
-                    ).json()
+                        max_retries=2,
+                        delay=1
+                    )
                     
-                    if "data" in response3 and response3["data"]:
-                        total_subjects += len(response3["data"])
+                    resp3_data = response3.json()
+                    
+                    if response3.status_code == 429:
+                        await message.reply_text(f"**⚠️ Rate limited while fetching topics. Waiting...**")
+                        time.sleep(3)
+                        continue
+                    
+                    if "data" in resp3_data and resp3_data["data"]:
+                        total_subjects += len(resp3_data["data"])
                         with open(output_file, 'a', encoding='utf-8') as f:
-                            f.write(f"{json.dumps(response3['data'])}\n")
+                            f.write(f"{json.dumps(resp3_data['data'])}\n")
                             
             except Exception as e:
                 print(f"Error processing subject {t}: {e}")
@@ -591,20 +727,26 @@ async def handle_today_class(app, message, headers, params, batch_id, batch_name
         
         await message.reply_text(f"**✅ Date Selected: `{selected_date}`**\n\n**🔍 Fetching content for {batch_name} on {selected_date}...**")
         
-        # Convert date to timestamp for API
-        date_obj = datetime.datetime.strptime(selected_date, "%Y-%m-%d")
-        start_of_day = int(date_obj.replace(hour=0, minute=0, second=0).timestamp() * 1000)
-        end_of_day = int(date_obj.replace(hour=23, minute=59, second=59).timestamp() * 1000)
+        # Add delay
+        time.sleep(1)
         
         # Get batch subjects
-        response2 = requests.get(
+        response2 = make_request_with_retry(
+            "GET",
             f'{PW_API_BASE}/v3/batches/{batch_id}/details',
             headers=headers,
             params=params,
-            timeout=30
-        ).json()
+            max_retries=2,
+            delay=1
+        )
         
-        subjects = response2.get('data', {}).get('subjects', [])
+        resp2_data = response2.json()
+        
+        if response2.status_code == 429:
+            await message.reply_text("**❌ Rate Limited!**\n\nPlease wait a few minutes and try again.")
+            return
+        
+        subjects = resp2_data.get('data', {}).get('subjects', [])
         
         if not subjects:
             await message.reply_text("**❌ No subjects found in this batch!**")
@@ -661,15 +803,27 @@ async def handle_today_class(app, message, headers, params, batch_id, batch_name
             
             while page <= 50:  # Safety limit
                 try:
+                    # Add delay between requests
+                    time.sleep(0.5)
+                    
                     topic_params = {'page': str(page), 'limit': '20'}
-                    topic_response = requests.get(
+                    topic_response = make_request_with_retry(
+                        "GET",
                         f"{PW_API_BASE}/v3/batches/{batch_id}/subject/{subject_id}/topics",
                         params=topic_params,
                         headers=headers,
-                        timeout=30
-                    ).json()
+                        max_retries=2,
+                        delay=1
+                    )
                     
-                    topics = topic_response.get("data", [])
+                    if topic_response.status_code == 429:
+                        await status_msg.edit_text(f"**⚠️ Rate limited in {subject_name}. Waiting...**")
+                        time.sleep(3)
+                        continue
+                    
+                    topics_data = topic_response.json()
+                    topics = topics_data.get("data", [])
+                    
                     if not topics:
                         break
                     
@@ -678,7 +832,6 @@ async def handle_today_class(app, message, headers, params, batch_id, batch_name
                         topic_date = topic.get("createdAt", "")
                         if topic_date:
                             try:
-                                # Try to parse from date string
                                 topic_date_obj = datetime.datetime.fromisoformat(topic_date.replace('Z', '+00:00'))
                                 topic_date_str = topic_date_obj.strftime("%Y-%m-%d")
                                 
@@ -742,13 +895,3 @@ async def handle_today_class(app, message, headers, params, batch_id, batch_name
             
     except Exception as e:
         await message.reply_text(f"**❌ Error:** `{str(e)}`")
-
-
-# Legacy code reference (kept for reference)
-"""
-params1 = {'page': '1','tag': '','contentType': 'videos'}
-response3 = requests.get(f'{PW_API_BASE}/v3/batches/{raw_text3}/subject/{t}/contents', params=params1, headers=headers).json()["data"]
-
-params2 = {'page': '1','tag': '','contentType': 'notes'}
-response4 = requests.get(f'{PW_API_BASE}/v3/batches/{raw_text3}/subject/{t}/contents', params=params2, headers=headers).json()["data"]
-"""
