@@ -15,3 +15,10 @@ app = Client(
     sleep_threshold=120,
     workers=200
 )
+
+import os
+import glob
+
+for file in glob.glob("Extractor/modules/*.py"):
+    module_name = file.replace("/", ".")[:-3]
+    __import__(module_name)
