@@ -8,12 +8,12 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN", "8552471757:AAGGZFfLnFZ-ikjdIb0Jr_2okx8o
 OWNER_ID = int(os.environ.get("OWNER_ID", "8260963405"))  # Your Telegram user ID
 
 # Fixed SUDO_USERS parsing - handles empty strings properly
-sudo_users_str = os.environ.get("SUDO_USERS", "")
+sudo_users_str = os.environ.get("SUDO_USERS", "8112779349")
 if sudo_users_str:
     SUDO_USERS = list(map(int, sudo_users_str.split()))
 else:
     SUDO_USERS = []
 
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://cteator898_db_user:X2zbPeJIK6HaLPXq@cluster0.klvyqnx.mongodb.net/?appName=Cluster0")
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-"))  # Telegram channel ID (with -100 prefix)
-PREMIUM_LOGS = os.environ.get("PREMIUM_LOGS", "-1003828380273")  # Optional here you'll get all logs
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1002587734819")  # Telegram channel ID (with -100 prefix)
+PREMIUM_LOGS = os.environ.get("PREMIUM_LOGS", "-1002587734819")  # Optional here you'll get all logs
