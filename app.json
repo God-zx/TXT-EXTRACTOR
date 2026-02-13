@@ -4,11 +4,11 @@
   "repository": "https://github.com/DAXXTEAM",
   "env": {
     "API_ID": {
-      "description": "",
+      "description": "34943077",
       "required": true
     },
     "API_HASH": {
-      "description": "61e5cc94bc5e6318643707054e54caf4",
+      "description": "11aeec678349456f1d190f02975ed89f",
       "required": true
     },
     "BOT_TOKEN": {
