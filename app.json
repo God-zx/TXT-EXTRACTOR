@@ -4,7 +4,7 @@
   "repository": "https://github.com/DAXXTEAM",
   "env": {
     "API_ID": {
-      "description": "22518279",
+      "description": "",
       "required": true
     },
     "API_HASH": {
@@ -12,15 +12,15 @@
       "required": true
     },
     "BOT_TOKEN": {
-      "description": "8006527414:AAG9FvwPFf3ozLwe5W_PYnb-LNxH4JE86wU",
+      "description": "8552471757:AAGGZFfLnFZ-ikjdIb0Jr_2okx8oiCnO0iQ",
       "required": true
     },
     "BOT_USERNAME": {
-      "description": "Nawaab_Extractor_Robot",
+      "description": "Zx_Extractor_Bot",
       "required": true
     },
     "OWNER_ID": {
-      "description": "8500852075",
+      "description": "8260963405",
       "required": true
     },
     "SUDO_USERS": {
@@ -28,15 +28,15 @@
       "required": false
     },
     "CHANNEL_ID": {
-      "description": "-1003828380273",
+      "description": "-1002587734819",
       "required": true
     },
     "MONGO_URL": {
-      "description": "mongodb+srv://<sandeepsharma786>:<Sandeep786>@cluster0.xz78w44.mongodb.net",
+      "description": "mongodb+srv://cteator898_db_user:X2zbPeJIK6HaLPXq@cluster0.klvyqnx.mongodb.net/?appName=Cluster0",
       "required": true
     },
     "PREMIUM_LOGS": {
-      "description": "-1003533276261",
+      "description": "-1002587734819",
       "required": true
     }
   },
