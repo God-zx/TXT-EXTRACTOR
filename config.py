@@ -1,11 +1,11 @@
 import os
 from os import getenv
 
-API_ID = int(os.environ.get("API_ID", "22518279"))  # Replace with your actual api_id or use .env
-API_HASH = os.environ.get("API_HASH", "61e5cc94bc5e6318643707054e54caf4")
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8006527414:AAG9FvwPFf3ozLwe5W_PYnb-LNxH4JE86wU")
+API_ID = int(os.environ.get("API_ID", "34943077"))  # Replace with your actual api_id or use .env
+API_HASH = os.environ.get("API_HASH", "11aeec678349456f1d190f02975ed89f")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8552471757:AAGGZFfLnFZ-ikjdIb0Jr_2okx8oiCnO0iQ")
 
-OWNER_ID = int(os.environ.get("OWNER_ID", "8500852075"))  # Your Telegram user ID
+OWNER_ID = int(os.environ.get("OWNER_ID", "8260963405"))  # Your Telegram user ID
 
 # Fixed SUDO_USERS parsing - handles empty strings properly
 sudo_users_str = os.environ.get("SUDO_USERS", "")
@@ -14,6 +14,6 @@ if sudo_users_str:
 else:
     SUDO_USERS = []
 
-MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://<sandeepsharma786>:<Sandeep786>@cluster0.xz78w44.mongodb.net")
-CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-1003533276261"))  # Telegram channel ID (with -100 prefix)
+MONGO_URL = os.environ.get("MONGO_URL", "mongodb+srv://cteator898_db_user:X2zbPeJIK6HaLPXq@cluster0.klvyqnx.mongodb.net/?appName=Cluster0")
+CHANNEL_ID = int(os.environ.get("CHANNEL_ID", "-"))  # Telegram channel ID (with -100 prefix)
 PREMIUM_LOGS = os.environ.get("PREMIUM_LOGS", "-1003828380273")  # Optional here you'll get all logs
